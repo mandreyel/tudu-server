@@ -11,6 +11,7 @@ bcrypt = "0.3"
 chrono = { version = "0.4", features = ["serde"] }
 diesel = { version = "1.0", features = ["mysql", "uuid", "r2d2", "chrono"] }
 dotenv = "0.9"
+failure = "0.1"
 futures = "0.1.2"
 serde = "1.0"
 serde_derive = "1.0"
