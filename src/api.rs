@@ -41,12 +41,14 @@ fn is_password_good(pw: &str) -> bool {
 }
 
 fn is_email_valid(email: &str) -> bool {
+    // TODO
     true
 }
 
 pub fn register_user(
     (state, user_info): (State<AppState>, Json<UserInfo>)
 ) -> Box<Future<Item = HttpResponse, Error = Error>> {
+    // TODO: is there a cleaner way to return with an error future?
     if !is_password_good(&user_info.password) {
         return Box::new(futures::future::err(ServiceError::WeakPassword.into()));
     }
@@ -54,7 +56,6 @@ pub fn register_user(
         return Box::new(futures::future::err(ServiceError::InvalidEmail.into()));
     }
 
-    // TODO: verify that email and password are acceptable.
     let msg = Register {
         email: user_info.email.clone(),
         password: user_info.password.clone(),

@@ -1,6 +1,8 @@
 use actix_web::{Error, error::ResponseError, HttpResponse};
 use std::convert::From;
 
+// TODO: maybe split up errors as user facing error and internal errors that
+// should not be exposed.
 #[derive(Fail, Debug)]
 pub enum ServiceError {
     #[fail(display = "Invalid Credentials")]
@@ -15,6 +17,7 @@ pub enum ServiceError {
 
 impl From<Error> for ServiceError {
     fn from(e: Error) -> ServiceError {
+        // TODO: implement specializations.
         match e {
             _ => ServiceError::InternalError,
         }
