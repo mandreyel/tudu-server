@@ -10,11 +10,13 @@ mod schema;
 use actix::prelude::*;
 use actix_web::{http, server, App};
 use actix_web::middleware::session::{CookieSessionBackend, SessionStorage};
+use actix_web::middleware::Logger;
 use crate::db::DbExecutor;
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::mysql::MysqlConnection;
 use dotenv::dotenv;
 use std::env;
+use simplelog::{Config, LevelFilter, TermLogger};
 
 // TODO
 static SESSION_SIGNING_KEY: &[u8] = &[0; 32];
@@ -24,6 +26,7 @@ pub struct AppState {
 }
 
 fn main() {
+    TermLogger::init(LevelFilter::Info, Config::default()).unwrap();
     let sys = System::new("tudu-server");
 
     dotenv().ok();
@@ -39,6 +42,7 @@ fn main() {
             CookieSessionBackend::signed(SESSION_SIGNING_KEY).secure(false)
         );
         App::with_state(AppState { db: db.clone() })
+            .middleware(Logger::default())
             .middleware(session_store)
             .route("/user/login", http::Method::POST, api::login_user)
             .route("/user/create", http::Method::POST, api::register_user)

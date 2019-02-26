@@ -1,5 +1,4 @@
 use actix::{Actor, Handler, Message, SyncContext};
-use actix_web::{error::ResponseError, HttpResponse};
 use bcrypt::{hash, verify, DEFAULT_COST};
 use chrono::{NaiveDateTime, Local};
 use crate::schema::user;
