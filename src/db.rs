@@ -25,6 +25,7 @@ pub struct User {
     pub created_at: NaiveDateTime,
 }
 
+/// Message send to database actor to register a new user.
 pub struct Register {
     pub email: String,
     pub password: String,
@@ -65,6 +66,7 @@ impl Handler<Register> for DbExecutor {
     }
 }
 
+/// Message send to database actor to login an existing user.
 pub struct Login {
     pub email: String,
     pub password: String,
@@ -84,13 +86,24 @@ impl Handler<Login> for DbExecutor {
     type Result = <Login as Message>::Result;
 
     fn handle(&mut self, msg: Login, _: &mut Self::Context) -> Self::Result {
-        let hashed_pw = String::new();
-        if verify(&msg.password, &hashed_pw).expect("Failed to verify password") {
-            Ok(Session {
-                session_id: 0,
-            })
-        } else {
-            Err(ServiceError::InvalidCredentials)
+        use crate::schema::user::dsl::*;
+
+        let conn = self.0.get().unwrap();
+        let mut items = user
+            .filter(email.eq(&msg.email))
+            .load::<User>(&conn)
+            .unwrap();
+
+        if let Some(u) = items.pop() {
+            let msg_pw = msg.password.into_bytes();
+            let user_pw_hash = String::from_utf8_lossy(&u.password);
+            match verify(&msg_pw, &user_pw_hash) {
+                Ok(matching) => if matching {
+                    return Ok(Session { session_id: 1 })
+                },
+                Err(_) => (),
+            }
         }
+        Err(ServiceError::InvalidCredentials)
     }
 }
