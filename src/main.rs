@@ -23,11 +23,10 @@ pub struct AppState {
 }
 
 fn main() {
-    dotenv().ok();
-    let db_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-
     let sys = System::new("tudu-server");
 
+    dotenv().ok();
+    let db_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     let manager = ConnectionManager::<MysqlConnection>::new(db_url);
     let pool = Pool::builder()
         .build(manager)
@@ -40,7 +39,7 @@ fn main() {
         );
         App::with_state(AppState { db: db.clone() })
             .middleware(session_store)
-            .route("/user/login", http::Method::POST, api::login)
+            .route("/user/login", http::Method::POST, api::login_user)
             .route("/user/create", http::Method::POST, api::register_user)
             .resource("/", |r| r.f(api::index))
     };
