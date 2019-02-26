@@ -1,7 +1,8 @@
 use actix_web::{AsyncResponder, Error, Json, HttpRequest, HttpResponse, State};
 use actix_web::error::ResponseError;
 use crate::AppState;
-use crate::db::{Login, Register, ServiceError};
+use crate::db::{Login, Register};
+use crate::errors::*;
 use futures::future::Future;
 
 pub fn index(_req: &HttpRequest<AppState>) -> &'static str {

@@ -4,6 +4,7 @@
 
 mod api;
 mod db;
+mod errors;
 mod schema;
 
 use actix::prelude::*;

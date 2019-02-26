@@ -1,12 +1,12 @@
 use actix::{Actor, Handler, Message, SyncContext};
-use actix_web::{Error, error::ResponseError, HttpResponse};
+use actix_web::{error::ResponseError, HttpResponse};
 use bcrypt::{hash, verify, DEFAULT_COST};
 use chrono::{NaiveDateTime, Local};
 use crate::schema::user;
+use crate::errors::*;
 use diesel::prelude::*;
 use diesel::mysql::MysqlConnection;
 use diesel::r2d2::{ConnectionManager, Pool};
-use std::convert::From;
 
 pub struct DbExecutor(pub Pool<ConnectionManager<MysqlConnection>>);
 
@@ -24,37 +24,6 @@ pub struct User {
     pub password: Vec<u8>,
     /// The date on which the user account was created.
     pub created_at: NaiveDateTime,
-}
-
-#[derive(Fail, Debug)]
-pub enum ServiceError {
-    #[fail(display = "Invalid Credentials")]
-    InternalError,
-    #[fail(display = "Invalid Credentials")]
-    InvalidCredentials,
-    #[fail(display = "Invalid Email")]
-    InvalidEmail,
-    #[fail(display = "Weak Password")]
-    WeakPassword,
-}
-
-impl From<Error> for ServiceError {
-    fn from(e: Error) -> ServiceError {
-        match e {
-            _ => ServiceError::InternalError,
-        }
-    }
-}
-
-impl ResponseError for ServiceError {
-    fn error_response(&self) -> HttpResponse {
-        match *self {
-            ServiceError::InternalError => HttpResponse::InternalServerError().finish(),
-            ServiceError::InvalidCredentials => HttpResponse::Unauthorized().finish(),
-            ServiceError::InvalidEmail => HttpResponse::BadRequest().finish(),
-            ServiceError::WeakPassword => HttpResponse::BadRequest().finish(),
-        }
-    }
 }
 
 pub struct Register {
