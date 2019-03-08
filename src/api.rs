@@ -67,7 +67,10 @@ pub fn register_user(
         .from_err()
         .and_then(|db_resp| match db_resp {
             Ok(user) => Ok(HttpResponse::Ok().json(user)),
-            Err(e) => Ok(e.error_response()),
+            Err(e) => {
+                log::info!("Error creating user: {}", e);
+                Ok(e.error_response())
+            }
         })
         .responder()
 }

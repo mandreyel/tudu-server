@@ -1,11 +1,12 @@
 use actix::{Actor, Handler, Message, SyncContext};
 use bcrypt::{hash, verify, DEFAULT_COST};
 use chrono::{NaiveDateTime, Local};
-use crate::schema::user;
+use crate::schema::{session, user};
 use crate::errors::*;
 use diesel::prelude::*;
 use diesel::mysql::MysqlConnection;
 use diesel::r2d2::{ConnectionManager, Pool};
+use uuid::Uuid;
 
 pub struct DbExecutor(pub Pool<ConnectionManager<MysqlConnection>>);
 
@@ -56,12 +57,14 @@ impl Handler<Register> for DbExecutor {
         diesel::insert_into(user)
             .values(&new_user)
             .execute(&conn)
-            .unwrap();
+            .expect("Error creating new user");
+
+        log::info!("Created new user");
+
         let new_user: User = user
             .order(user_id.desc())
             .first(&conn)
-            .unwrap();
-
+            .expect("Error fetching newly created user");
         Ok(new_user)
     }
 }
@@ -77,9 +80,12 @@ impl Message for Login {
 }
 
 /// The object returned to the user after a successful authentication.
-#[derive(Serialize)]
+#[derive(Insertable, Queryable, Serialize, Deserialize)]
+#[table_name = "session"]
 pub struct Session {
-    pub session_id: i32,
+    pub session_id: String,
+    pub user_id: i32,
+    pub created_at: NaiveDateTime,
 }
 
 impl Handler<Login> for DbExecutor {
@@ -87,19 +93,37 @@ impl Handler<Login> for DbExecutor {
 
     fn handle(&mut self, msg: Login, _: &mut Self::Context) -> Self::Result {
         use crate::schema::user::dsl::*;
+        use crate::schema::session::dsl::*;
+        use crate::schema::session::dsl::user_id as session_user_id;
 
         let conn = self.0.get().unwrap();
         let mut items = user
             .filter(email.eq(&msg.email))
             .load::<User>(&conn)
-            .unwrap();
+            .expect("Error finding user");
 
         if let Some(u) = items.pop() {
-            let msg_pw = msg.password.into_bytes();
+            let pw = msg.password.into_bytes();
             let user_pw_hash = String::from_utf8_lossy(&u.password);
-            match verify(&msg_pw, &user_pw_hash) {
+            match verify(&pw, &user_pw_hash) {
                 Ok(matching) => if matching {
-                    return Ok(Session { session_id: 1 })
+                    // Delete old session id if it exists.
+                    diesel::delete(session.filter(session_user_id.eq(&u.user_id)))
+                        .execute(&conn)
+                        .expect("Error deleting previous session");
+
+                    // Create new session id for this user.
+                    let new_session = Session {
+                        session_id: Uuid::new_v4().to_simple().to_string(),
+                        user_id: u.user_id,
+                        created_at: Local::now().naive_local(),
+                    };
+                    diesel::insert_into(session)
+                        .values(&new_session)
+                        .execute(&conn)
+                        .expect("Error creating new session");
+                    
+                    return Ok(new_session)
                 },
                 Err(_) => (),
             }
