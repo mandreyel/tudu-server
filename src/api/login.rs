@@ -5,7 +5,8 @@ use chrono::Local;
 use crate::AppState;
 use crate::api::{Session, UserCreds};
 use crate::errors::*;
-use crate::db::{DbExecutor, User};
+use crate::db::DbExecutor;
+use crate::db::models::User;
 use diesel::prelude::*;
 use futures::future::Future;
 use uuid::Uuid;
@@ -53,20 +54,20 @@ impl Handler<Login> for DbExecutor {
             .load::<User>(&conn)
             .expect("Error finding user");
 
-        if let Some(u) = items.pop() {
+        if let Some(user) = items.pop() {
             let pw = msg.password.into_bytes();
-            let user_pw_hash = String::from_utf8_lossy(&u.password);
+            let user_pw_hash = String::from_utf8_lossy(&user.password);
             match verify(&pw, &user_pw_hash) {
                 Ok(matching) => if matching {
                     // Delete old session id if it exists.
-                    diesel::delete(sessions.filter(session_user_id.eq(&u.user_id)))
+                    diesel::delete(sessions.filter(session_user_id.eq(&user.user_id)))
                         .execute(&conn)
                         .expect("Error deleting previous session");
 
                     // Create new session id for this user.
                     let new_session = Session {
                         session_id: Uuid::new_v4().to_simple().to_string(),
-                        user_id: u.user_id,
+                        user_id: user.user_id,
                         created_at: Local::now().naive_local(),
                     };
                     diesel::insert_into(sessions)

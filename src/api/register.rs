@@ -5,7 +5,8 @@ use bcrypt::{hash, DEFAULT_COST};
 use chrono::Local;
 use crate::AppState;
 use crate::api::UserCreds;
-use crate::db::{DbExecutor, User};
+use crate::db::{DbExecutor};
+use crate::db::models::{NewUser, User};
 use crate::errors::*;
 use diesel::prelude::*;
 use futures::future::Future;
@@ -71,8 +72,7 @@ impl Handler<Register> for DbExecutor {
             .expect("Failed to hash password");
         assert!(hashed_pw.len() <= 60);
 
-        let new_user = User {
-            user_id: 0,
+        let new_user = NewUser {
             email: msg.email,
             password: hashed_pw.into(),
             created_at: Local::now().naive_local(),
