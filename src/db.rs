@@ -131,3 +131,28 @@ impl Handler<Login> for DbExecutor {
         Err(ServiceError::InvalidCredentials)
     }
 }
+
+pub struct Logout {
+    pub session: Session,
+}
+
+impl Message for Logout {
+    type Result = Result<(), ServiceError>;
+}
+
+impl Handler<Logout> for DbExecutor {
+    type Result = <Logout as Message>::Result;
+
+    fn handle(&mut self, msg: Logout, _: &mut Self::Context) -> Self::Result {
+        use crate::schema::session::dsl::*;
+
+        let conn = self.0.get().unwrap();
+        let res = diesel::delete(session.filter(session_id.eq(&msg.session.session_id)))
+            .execute(&conn);
+
+        match res {
+            Ok(_) => Ok(()),
+            Err(_) => Err(ServiceError::InvalidSession),
+        }
+    }
+}

@@ -1,7 +1,7 @@
 use actix_web::{AsyncResponder, Error, Json, HttpRequest, HttpResponse, State};
 use actix_web::error::ResponseError;
 use crate::AppState;
-use crate::db::{Login, Register};
+use crate::db::{Login, Logout, Register, Session};
 use crate::errors::*;
 use futures::future::Future;
 
@@ -30,6 +30,21 @@ pub fn login_user(
         .from_err()
         .and_then(|dp_resp| match dp_resp {
             Ok(session) => Ok(HttpResponse::Ok().json(session)),
+            Err(e) => Ok(e.error_response()),
+        })
+        .responder()
+}
+
+pub fn logout_user(
+    (state, logout): (State<AppState>, Json<Session>)
+) -> Box<Future<Item = HttpResponse, Error = Error>> {
+    let msg = Logout { session: logout.into_inner() };
+    state
+        .db
+        .send(msg)
+        .from_err()
+        .and_then(|dp_resp| match dp_resp {
+            Ok(()) => Ok(HttpResponse::Ok().finish()),
             Err(e) => Ok(e.error_response()),
         })
         .responder()

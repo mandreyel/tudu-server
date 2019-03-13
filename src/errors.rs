@@ -11,6 +11,8 @@ pub enum ServiceError {
     InvalidCredentials,
     #[fail(display = "Invalid Email")]
     InvalidEmail,
+    #[fail(display = "Invalid Session")]
+    InvalidSession,
     #[fail(display = "Weak Password")]
     WeakPassword,
 }
@@ -30,6 +32,7 @@ impl ResponseError for ServiceError {
             ServiceError::InternalError => HttpResponse::InternalServerError().finish(),
             ServiceError::InvalidCredentials => HttpResponse::Unauthorized().finish(),
             ServiceError::InvalidEmail => HttpResponse::BadRequest().finish(),
+            ServiceError::InvalidSession => HttpResponse::Unauthorized().finish(),
             ServiceError::WeakPassword => HttpResponse::BadRequest().finish(),
         }
     }
