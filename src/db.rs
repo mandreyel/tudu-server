@@ -1,7 +1,7 @@
 use actix::{Actor, Handler, Message, SyncContext};
 use bcrypt::{hash, verify, DEFAULT_COST};
 use chrono::{NaiveDateTime, Local};
-use crate::schema::{session, user};
+use crate::schema::{sessions, users};
 use crate::errors::*;
 use diesel::prelude::*;
 use diesel::mysql::MysqlConnection;
@@ -15,7 +15,7 @@ impl Actor for DbExecutor {
 }
 
 #[derive(Insertable, Queryable, Serialize, Deserialize)]
-#[table_name = "user"]
+#[table_name = "users"]
 pub struct User {
     pub user_id: i32,
     /// The email the user signed up with.
@@ -40,7 +40,7 @@ impl Handler<Register> for DbExecutor {
     type Result = <Register as Message>::Result;
 
     fn handle(&mut self, msg: Register, _: &mut Self::Context) -> Self::Result {
-        use crate::schema::user::dsl::*;
+        use crate::schema::users::dsl::*;
 
         let conn = self.0.get().unwrap();
         let hashed_pw = hash(&msg.password, DEFAULT_COST)
@@ -54,14 +54,14 @@ impl Handler<Register> for DbExecutor {
             created_at: Local::now().naive_local(),
         };
 
-        diesel::insert_into(user)
+        diesel::insert_into(users)
             .values(&new_user)
             .execute(&conn)
             .expect("Error creating new user");
 
         log::info!("Created new user");
 
-        let new_user: User = user
+        let new_user: User = users
             .order(user_id.desc())
             .first(&conn)
             .expect("Error fetching newly created user");
@@ -81,7 +81,7 @@ impl Message for Login {
 
 /// The object returned to the user after a successful authentication.
 #[derive(Insertable, Queryable, Serialize, Deserialize)]
-#[table_name = "session"]
+#[table_name = "sessions"]
 pub struct Session {
     pub session_id: String,
     pub user_id: i32,
@@ -92,12 +92,12 @@ impl Handler<Login> for DbExecutor {
     type Result = <Login as Message>::Result;
 
     fn handle(&mut self, msg: Login, _: &mut Self::Context) -> Self::Result {
-        use crate::schema::user::dsl::*;
-        use crate::schema::session::dsl::*;
-        use crate::schema::session::dsl::user_id as session_user_id;
+        use crate::schema::users::dsl::*;
+        use crate::schema::sessions::dsl::*;
+        use crate::schema::sessions::dsl::user_id as session_user_id;
 
         let conn = self.0.get().unwrap();
-        let mut items = user
+        let mut items = users
             .filter(email.eq(&msg.email))
             .load::<User>(&conn)
             .expect("Error finding user");
@@ -108,7 +108,7 @@ impl Handler<Login> for DbExecutor {
             match verify(&pw, &user_pw_hash) {
                 Ok(matching) => if matching {
                     // Delete old session id if it exists.
-                    diesel::delete(session.filter(session_user_id.eq(&u.user_id)))
+                    diesel::delete(sessions.filter(session_user_id.eq(&u.user_id)))
                         .execute(&conn)
                         .expect("Error deleting previous session");
 
@@ -118,7 +118,7 @@ impl Handler<Login> for DbExecutor {
                         user_id: u.user_id,
                         created_at: Local::now().naive_local(),
                     };
-                    diesel::insert_into(session)
+                    diesel::insert_into(sessions)
                         .values(&new_session)
                         .execute(&conn)
                         .expect("Error creating new session");
@@ -144,10 +144,10 @@ impl Handler<Logout> for DbExecutor {
     type Result = <Logout as Message>::Result;
 
     fn handle(&mut self, msg: Logout, _: &mut Self::Context) -> Self::Result {
-        use crate::schema::session::dsl::*;
+        use crate::schema::sessions::dsl::*;
 
         let conn = self.0.get().unwrap();
-        let res = diesel::delete(session.filter(session_id.eq(&msg.session.session_id)))
+        let res = diesel::delete(sessions.filter(session_id.eq(&msg.session.session_id)))
             .execute(&conn);
 
         match res {
