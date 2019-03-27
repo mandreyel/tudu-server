@@ -1,12 +1,10 @@
 mod login;
 mod logout;
-mod index;
 mod register;
 
 pub use login::login_user;
 pub use logout::logout_user;
 pub use register::register_user;
-pub use index::index;
 
 use chrono::NaiveDateTime;
 use crate::schema::sessions;

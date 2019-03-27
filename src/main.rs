@@ -48,7 +48,6 @@ fn main() {
             .route("/user/login", http::Method::POST, api::login_user)
             .route("/user/logout", http::Method::POST, api::logout_user)
             .route("/user/create", http::Method::POST, api::register_user)
-            .resource("/", |r| r.f(api::index))
     };
 
     server::new(app).bind("localhost:8888").unwrap().start();
