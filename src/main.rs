@@ -39,6 +39,7 @@ fn main() {
 
     let app = move || {
         let session_store = SessionStorage::new(
+            // TODO: remove the Secure: false flag in production.
             CookieSessionBackend::signed(SESSION_SIGNING_KEY).secure(false)
         );
         App::with_state(AppState { db: db.clone() })
